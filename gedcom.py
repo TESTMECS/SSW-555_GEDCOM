@@ -139,7 +139,6 @@ file_path = input("Please enter the path to the GEDCOM file: ")
 # Process the GEDCOM file
 process_gedcom(file_path)
 # Check for anomalies
-print(families)
 check_anomalies()
 
 
