@@ -98,6 +98,8 @@ def print_individuals_and_families(output_file):
             children_ids = ', '.join(fam['children'])
             fam_table.add_row([fam['id'], fam['husband'], husband_name, fam['wife'], wife_name, children_ids])
         f.write(fam_table.get_string())
+    print(ind_table.get_string())
+    print(fam_table.get_string())
 
 def check_anomalies():
     # US04 check marriage before divorce
