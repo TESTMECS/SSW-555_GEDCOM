@@ -98,20 +98,27 @@ def print_individuals_and_families(output_file):
             children_ids = ', '.join(fam['children'])
             fam_table.add_row([fam['id'], fam['husband'], husband_name, fam['wife'], wife_name, children_ids])
         f.write(fam_table.get_string())
-    print(ind_table.get_string())
-    print(fam_table.get_string())
+
 
 def check_anomalies():
     # US04 check marriage before divorce
     def check_marriage_before_divorce():
         for individual in individuals.values():
-            if 'marriage_date' in individual and 'divorce_date' in individual:
-                marriage_date = individual['marriage_date']
-                divorce_date = individual['divorce_date']
-
-                if marriage_date and divorce_date and marriage_date > divorce_date:
+            family = individual['spouse']
+            try:
+                marriage_date = families[family]['marriage_date']
+            except KeyError:
+                continue
+            try:
+                divorce_date = families[family]['divorce_date']
+            except KeyError:
+                continue
+            marriage_date = parse_date(marriage_date)
+            divorce_date = parse_date(divorce_date)
+            if marriage_date and divorce_date and marriage_date > divorce_date:
                     print( f"ERROR: Individual: US04 {individual['name']}: ({individual['id']}): {marriage_date}: has marriage date after divorce date." )
         return None
+    # US05 check marriage before death
     def check_marriage_before_death():
         for individual in individuals.values():
 
@@ -129,7 +136,6 @@ def check_anomalies():
                 continue
             marriage_date = parse_date(marriage_date)
             death_date = parse_date(death_date)
-            print(marriage_date, death_date)
             if marriage_date and death_date and marriage_date > death_date:
                 print( f"ERROR: Individual: US05 {individual['name']}: ({individual['id']}): {marriage_date}: has marriage date after death date." )
     # Call functions
