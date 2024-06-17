@@ -138,9 +138,36 @@ def check_anomalies():
             death_date = parse_date(death_date)
             if marriage_date and death_date and marriage_date > death_date:
                 print( f"ERROR: Individual: US05 {individual['name']}: ({individual['id']}): {marriage_date}: has marriage date after death date." )
+    # US06 check birth before death
+    def check_birth_before_death():
+        for individual in individuals.values():
+            birth_date = parse_date(individual['birthday'])
+            death_date = parse_date(individual['death_date'])
+            if birth_date and death_date and birth_date >= death_date:
+                print(f"ERROR: Individual: US06 {individual['name']}: ({individual['id']}): Birth date {individual['birthday']} is not earlier than death date {individual['death_date']}.")
+
+    # US07 check all dates are before current date
+    def check_dates_before_current():
+        for individual in individuals.values():
+            birth_date = parse_date(individual['birthday'])
+            death_date = parse_date(individual['death_date'])
+            if birth_date and birth_date > current_date:
+                print(f"ERROR: Individual: US07 {individual['name']}: ({individual['id']}): Birth date {individual['birthday']} is after the current date.")
+            if death_date and death_date > current_date:
+                print(f"ERROR: Individual: US07 {individual['name']}: ({individual['id']}): Death date {individual['death_date']} is after the current date.")
+        for family in families.values():
+            marriage_date = parse_date(family.get('marriage_date'))
+            divorce_date = parse_date(family.get('divorce_date'))
+            if marriage_date and marriage_date > current_date:
+                print(f"ERROR: Family: US07 {family['id']}: Marriage date {family['marriage_date']} is after the current date.")
+            if divorce_date and divorce_date > current_date:
+                print(f"ERROR: Family: US07 {family['id']}: Divorce date {family['divorce_date']} is after the current date.")
+
     # Call functions
     check_marriage_before_divorce()
     check_marriage_before_death()
+    check_birth_before_death()
+    check_dates_before_current()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
