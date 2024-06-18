@@ -163,6 +163,57 @@ def check_anomalies():
             if divorce_date and divorce_date > current_date:
                 print(f"ERROR: Family: US07 {family['id']}: Divorce date {family['divorce_date']} is after the current date.")
 
+    #US06 Divorce before death    
+    def check_divorce_before_death():
+    #errors = []
+     for family in families.values():
+        divorce_date = family.get('divorce_date')
+        if not divorce_date:
+            continue
+        divorce_date = parse_date(divorce_date)
+        
+        husband_id = family.get('husband')
+        wife_id = family.get('wife')
+        
+        husband_death_date = individuals.get(husband_id, {}).get('death_date')
+        wife_death_date = individuals.get(wife_id, {}).get('death_date')
+        
+        if husband_death_date:
+            husband_death_date = parse_date(husband_death_date)
+            if divorce_date > husband_death_date:
+                #errors.append
+                print(f"Error: Family: {family['id']}: has divorce date after husband's death date.")
+        
+        if wife_death_date:
+            wife_death_date = parse_date(wife_death_date)
+            if divorce_date > wife_death_date:
+                #errors.append
+                print(f"Error: Family: {family['id']}: has divorce date after wife's death date.")
+                
+     return None
+#errors
+    
+    #US08 Birth before marriage of parents
+    def check_birth_before_parents_marriage():
+       # errors = []
+        for family in families.values():
+            marriage_date = family.get('marriage_date')
+            if not marriage_date:
+                continue
+            marriage_date = parse_date(marriage_date)
+        
+        for child_id in family.get('children', []):
+            if child_id in individuals:
+                birth_date = individuals[child_id].get('birthday')
+                if birth_date:
+                    birth_date = parse_date(birth_date)
+                    if birth_date < marriage_date:
+                        #errors.append
+                        print(f"Error: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before the marriage of parents.")
+        return None 
+    
+    
+    
     # Call functions
     check_marriage_before_divorce()
     check_marriage_before_death()
