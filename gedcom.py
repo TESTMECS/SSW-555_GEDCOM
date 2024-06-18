@@ -210,7 +210,7 @@ def check_anomalies():
                     if birth_date < marriage_date:
                         #errors.append
                         print(f"Error: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before the marriage of parents.")
-        return None
+        return None 
     
     
     
