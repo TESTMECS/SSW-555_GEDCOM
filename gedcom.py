@@ -219,6 +219,8 @@ def check_anomalies():
     check_marriage_before_death()
     check_birth_before_death()
     check_dates_before_current()
+    check_divorce_before_death()
+    check_birth_before_parents_marriage()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
