@@ -229,8 +229,8 @@ def check_anomalies():
             marriage_date = individual.get('marriage_date')
             if marriage_date:
                 marriage_date = parse_date(marriage_date)
-                if birth_date < marriage_date:
-                    print(f"ERROR: US02: Individual: {individual['name']} ({individual['id']}): has birth date before marriage date.")
+                if birth_date > marriage_date:
+                    print(f"ERROR: US02: Individual: {individual['name']} ({individual['id']}): has birth date after marriage date.")
 
     #US09: Birth before death of parents
     def check_birth_before_death_parents():
