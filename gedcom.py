@@ -4,6 +4,7 @@ print(sys.executable)
 
 from prettytable import PrettyTable
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 valid_tags = ["INDI", "NAME", "SEX", "BIRT", "DEAT", "FAMC", "FAMS", "FAM", "MARR", "HUSB", "WIFE", "CHIL", "DIV", "DATE", "HEAD", "TRLR", "NOTE"]
 
@@ -142,6 +143,8 @@ def check_anomalies():
     def check_birth_before_death():
         for individual in individuals.values():
             birth_date = parse_date(individual['birthday'])
+            if individual.get('death_date') is None:
+                continue
             death_date = parse_date(individual['death_date'])
             if birth_date and death_date and birth_date >= death_date:
                 print(f"ERROR: Individual: US06 {individual['name']}: ({individual['id']}): Birth date {individual['birthday']} is not earlier than death date {individual['death_date']}.")
@@ -149,21 +152,26 @@ def check_anomalies():
     # US01 check all dates are before current date
     def check_dates_before_current():
         for individual in individuals.values():
+            current_date = datetime.now()
             birth_date = parse_date(individual['birthday'])
+            if individual.get('death_date') is None: continue
             death_date = parse_date(individual['death_date'])
             if birth_date and birth_date > current_date:
                 print(f"ERROR: Individual: US07 {individual['name']}: ({individual['id']}): Birth date {individual['birthday']} is after the current date.")
             if death_date and death_date > current_date:
                 print(f"ERROR: Individual: US07 {individual['name']}: ({individual['id']}): Death date {individual['death_date']} is after the current date.")
         for family in families.values():
+            if family.get('marriage_date') is None: continue
+            current_date = datetime.now()
             marriage_date = parse_date(family.get('marriage_date'))
+            if family.get('divorce_date') is None: continue
             divorce_date = parse_date(family.get('divorce_date'))
             if marriage_date and marriage_date > current_date:
                 print(f"ERROR: Family: US07 {family['id']}: Marriage date {family['marriage_date']} is after the current date.")
             if divorce_date and divorce_date > current_date:
                 print(f"ERROR: Family: US07 {family['id']}: Divorce date {family['divorce_date']} is after the current date.")
 
-    #US06 Divorce before death    
+    #US06 Divorce before death
     def check_divorce_before_death():
     #errors = []
      for family in families.values():
@@ -171,28 +179,28 @@ def check_anomalies():
         if not divorce_date:
             continue
         divorce_date = parse_date(divorce_date)
-        
+
         husband_id = family.get('husband')
         wife_id = family.get('wife')
-        
+
         husband_death_date = individuals.get(husband_id, {}).get('death_date')
         wife_death_date = individuals.get(wife_id, {}).get('death_date')
-        
+
         if husband_death_date:
             husband_death_date = parse_date(husband_death_date)
             if divorce_date > husband_death_date:
                 #errors.append
                 print(f"Error: Family: {family['id']}: has divorce date after husband's death date.")
-        
+
         if wife_death_date:
             wife_death_date = parse_date(wife_death_date)
             if divorce_date > wife_death_date:
                 #errors.append
                 print(f"Error: Family: {family['id']}: has divorce date after wife's death date.")
-                
+
      return None
 #errors
-    
+
     #US08 Birth before marriage of parents
     def check_birth_before_parents_marriage():
        # errors = []
@@ -201,7 +209,7 @@ def check_anomalies():
             if not marriage_date:
                 continue
             marriage_date = parse_date(marriage_date)
-        
+
         for child_id in family.get('children', []):
             if child_id in individuals:
                 birth_date = individuals[child_id].get('birthday')
@@ -209,18 +217,114 @@ def check_anomalies():
                     birth_date = parse_date(birth_date)
                     if birth_date < marriage_date:
                         #errors.append
-                        print(f"Error: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before the marriage of parents.")
-        return None 
-    
-    
-    
+                        print(f"ERROR: US08: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before the marriage of parents.")
+        return None
+    #US02 Birth before marriage of individual
+    def check_birth_before_marriage():
+        for individual in individuals.values():
+            birth_date = individual.get('birthday')
+            if not birth_date:
+                continue
+            birth_date = parse_date(birth_date)
+            marriage_date = individual.get('marriage_date')
+            if marriage_date:
+                marriage_date = parse_date(marriage_date)
+                if birth_date > marriage_date:
+                    print(f"ERROR: US02: Individual: {individual['name']} ({individual['id']}): has birth date after marriage date.")
+
+    #US09: Birth before death of parents
+    def check_birth_before_death_parents():
+        # child should be born before the death of the mother and before 9 months after the death of the father
+        for family in families.values():
+            mother_id = family.get('wife')
+            father_id = family.get('husband')
+            for child_id in family.get('children', []):
+                if child_id in individuals:
+                    child = individuals[child_id]
+                    birth_date = child.get('birthday')
+                    if not birth_date:
+                        continue
+                    birth_date = parse_date(birth_date) # child birthday
+                    death_date_mother = individuals[mother_id].get('death_date')
+                    death_date_father = individuals[father_id].get('death_date')
+                    if death_date_mother:
+                        death_date_mother = parse_date(death_date_mother)
+                        if birth_date > death_date_mother:
+                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before death date of mother.")
+                    if death_date_father:
+                        death_date_father = parse_date(death_date_father)
+                        nine_months_after = death_date_father + datetime.timedelta(days=90)
+                        if birth_date > nine_months_after:
+                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before 9 months after death date of father.")
+    # US10
+    def check_marriage_after_14():
+        # Marriage should be after 14 years of age
+        for family in families.values():
+            marriage_date = family.get('marriage_date')
+            if not marriage_date:
+                continue
+            marriage_date = parse_date(marriage_date)
+            mother_id = family.get('wife')
+            father_id = family.get('husband')
+            if mother_id in individuals and father_id in individuals:
+                birth_date_mother = individuals[mother_id].get('birthday')
+                birth_date_father = individuals[father_id].get('birthday')
+                if birth_date_mother:
+                    birth_date_mother = parse_date(birth_date_mother)
+                    mother_comparison = birth_date_mother + relativedelta(years=14)
+                    if marriage_date < mother_comparison:
+                        print(f"ERROR: US10: Family: {family['id']}: has marriage date before 14 years of age of mother.")
+                if birth_date_father:
+                    birth_date_father = parse_date(birth_date_father)
+                    father_comparison = birth_date_father + relativedelta(years=14)
+                    if marriage_date < father_comparison:
+                        print(f"ERROR: US10: Family: {family['id']}: has marriage date before 14 years of age of father.")
+    #US12
+    def mother_too_old():
+        # Mother should be less than 60 years old compared to her children
+        for family in families.values():
+            mother_id = family.get('wife')
+            for child_id in family.get('children', []):
+                if child_id in individuals:
+                    child = individuals[child_id]
+                    birth_date = child.get('birthday')
+                    if not birth_date:
+                        continue
+                    birth_date = parse_date(birth_date)
+                    if mother_id in individuals:
+                        mother = individuals[mother_id]
+                        mother_birth_date = mother.get('birthday')
+                        if mother_birth_date:
+                            mother_birth_date = parse_date(mother_birth_date)
+                            age = relativedelta(mother_birth_date, birth_date).years
+                            if age > 60:
+                                print(f"ERROR: US12: Family: {family['id']}: has mother too old.")
+
+
+
+
+
     # Call functions
+    #US04
     check_marriage_before_divorce()
+    #US05
     check_marriage_before_death()
+    #US03
     check_birth_before_death()
+    #US01
     check_dates_before_current()
+    #US06
     check_divorce_before_death()
+    #US08
     check_birth_before_parents_marriage()
+    #US02
+    check_birth_before_marriage()
+    #US09
+    check_birth_before_death_parents()
+    #US10
+    check_marriage_after_14()
+    #US12
+    mother_too_old()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
