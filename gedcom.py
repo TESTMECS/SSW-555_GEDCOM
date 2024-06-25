@@ -299,7 +299,45 @@ def check_anomalies():
                             age = relativedelta(mother_birth_date, birth_date).years
                             if age > 60:
                                 print(f"ERROR: US12: Family: {family['id']}: has mother too old.")
-
+    #US13
+    def siblings_spacing():
+        # Sibling birth should be more than 8 months apart
+        for family in families.values():
+            for child_id in family.get('children', []):
+                if child_id in individuals:
+                    child = individuals[child_id]
+                    birth_date = child.get('birthday')
+                    if not birth_date:
+                        continue
+                    birth_date = parse_date(birth_date)
+                    for sibling_id in family.get('children', []):
+                        if sibling_id in individuals and sibling_id != child_id:
+                            sibling = individuals[sibling_id]
+                            sibling_birth_date = sibling.get('birthday')
+                            if sibling_birth_date:
+                                sibling_birth_date = parse_date(sibling_birth_date)
+                                age = relativedelta(sibling_birth_date, birth_date).months
+                                if age < 8:
+                                    print(f"ERROR: US13: Family: {family['id']}: has sibling too young.")
+    #US14
+    def multiple_births():
+        # No more than 5 siblings should have the same birthday
+        for family in families.values():
+            for child_id in family.get('children', []):
+                if child_id in individuals:
+                    child = individuals[child_id]
+                    birth_date = child.get('birthday')
+                    if not birth_date:
+                        continue
+                    birth_date = parse_date(birth_date)
+                    for sibling_id in family.get('children', []):
+                        if sibling_id in individuals and sibling_id != child_id:
+                            sibling = individuals[sibling_id]
+                            sibling_birth_date = sibling.get('birthday')
+                            if sibling_birth_date:
+                                sibling_birth_date = parse_date(sibling_birth_date)
+                                if birth_date == sibling_birth_date:
+                                    print(f"ERROR: US14: Family: {family['id']}: has multiple births.")
     # US 16
     def check_wife_last_name():
         for family in families.values():
@@ -312,7 +350,7 @@ def check_anomalies():
                 wife_last_name = wife_name.split('/')[-1].strip() if '/' in wife_name else wife_name.split()[-1]
                 if husband_last_name != wife_last_name:
                     print(f"ERROR: Family: {family['id']}: Wife {wife_name} ({wife_id}) does not have the same last name as husband {husband_name} ({husband_id}).")
-                
+
     # US15 Check if there are more than 15 siblings
     def check_siblings_count():
         for family in families.values():
@@ -344,6 +382,10 @@ def check_anomalies():
     check_marriage_after_14()
     #US12
     mother_too_old()
+    #US13
+    siblings_spacing()
+    #US14
+    multiple_births()
     #US15
     check_siblings_count()
     #US16
