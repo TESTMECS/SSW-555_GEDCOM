@@ -300,6 +300,25 @@ def check_anomalies():
                             if age > 60:
                                 print(f"ERROR: US12: Family: {family['id']}: has mother too old.")
 
+    # US 16
+    def check_wife_last_name():
+        for family in families.values():
+            husband_id = family.get('husband')
+            wife_id = family.get('wife')
+            if husband_id in individuals and wife_id in individuals:
+                husband_name = individuals[husband_id]['name']
+                wife_name = individuals[wife_id]['name']
+                husband_last_name = husband_name.split('/')[-1].strip() if '/' in husband_name else husband_name.split()[-1]
+                wife_last_name = wife_name.split('/')[-1].strip() if '/' in wife_name else wife_name.split()[-1]
+                if husband_last_name != wife_last_name:
+                    print(f"ERROR: Family: {family['id']}: Wife {wife_name} ({wife_id}) does not have the same last name as husband {husband_name} ({husband_id}).")
+                
+    # US15 Check if there are more than 15 siblings
+    def check_siblings_count():
+        for family in families.values():
+            if len(family['children']) > 15:
+                print(f"ERROR: Family: US15 {family['id']} has more than 15 siblings.")
+
 
 
 
@@ -325,6 +344,10 @@ def check_anomalies():
     check_marriage_after_14()
     #US12
     mother_too_old()
+    #US15
+    check_siblings_count()
+    #US16
+    check_wife_last_name()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
