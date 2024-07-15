@@ -349,13 +349,69 @@ def check_anomalies():
                 husband_last_name = husband_name.split('/')[-1].strip() if '/' in husband_name else husband_name.split()[-1]
                 wife_last_name = wife_name.split('/')[-1].strip() if '/' in wife_name else wife_name.split()[-1]
                 if husband_last_name != wife_last_name:
-                    print(f"ERROR: Family: {family['id']}: Wife {wife_name} ({wife_id}) does not have the same last name as husband {husband_name} ({husband_id}).")
+                    print(f"ERROR: US16: Family: {family['id']}: Wife {wife_name} ({wife_id}) does not have the same last name as husband {husband_name} ({husband_id}).")
 
     # US15 Check if there are more than 15 siblings
     def check_siblings_count():
         for family in families.values():
             if len(family['children']) > 15:
                 print(f"ERROR: Family: US15 {family['id']} has more than 15 siblings.")
+    #US17
+    def check_marriage_to_descendants():
+
+        # children : parents
+        # children / husband or wife then I have to check if the other is a parents'
+        map = {}
+        for family in families.values():
+            for child_id in family.get('children', []):
+                newlist = []
+                if child_id:
+                    husband_id = family.get('husband')
+                    wife_id = family.get('wife')
+                    newlist.append(husband_id)
+                    newlist.append(wife_id)
+                    map[child_id] = newlist
+        for family in families.values():
+            husband_id = family.get('husband')
+            wife_id = family.get('wife')
+            if husband_id in map:
+                if wife_id in map[husband_id]:
+                    print(f"ERROR: US17: Family: {family['id']}: has marriage to descendants.")
+            if wife_id in map:
+                if husband_id in map[wife_id]:
+                    print(f"ERROR: US17: Family: {family['id']}: has marriage to descendants.")
+
+
+
+
+    # US18
+    def check_siblings_marriage():
+        siblings = []
+        husband_sib = False
+        wife_sib = False
+        for family in families.values():
+            newlist = []
+            for child_id in family.get('children', []):
+
+                newlist.append(child_id)
+            siblings.append(newlist)
+            newlist = []
+        for family in families.values():
+            husband_id = family.get('husband')
+            wife_id = family.get('wife')
+            for sibling in siblings:
+                if husband_id in sibling:
+                    husband_sib = True
+                if wife_id in sibling:
+                    wife_sib = True
+            if husband_sib and wife_sib:
+                print(f"ERROR: US18: Family: {family['id']}: has siblings married.")
+            husband_sib = False
+            wife_sib = False
+
+
+
+
 
 
 
@@ -390,6 +446,10 @@ def check_anomalies():
     check_siblings_count()
     #US16
     check_wife_last_name()
+    #US17
+    check_marriage_to_descendants()
+    #US18
+    check_siblings_marriage()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
