@@ -409,7 +409,111 @@ def check_anomalies():
             husband_sib = False
             wife_sib = False
 
+    def check_no_first_cousin_marriages():
+    # Create a mapping of individuals to their grandparents
+        grandparent_map = {}
+        for family in families.values():
+            children = family.get('children', [])
+            for child in children:
+                if child in individuals:
+                    child_family_id = individuals[child].get('child')
+                    if child_family_id and child_family_id in families:
+                        grandparents = families[child_family_id]
+                        grandparent_map[child] = grandparents
 
+        # Identify first cousins
+        first_cousin_pairs = set()
+        for child1, grandparents1 in grandparent_map.items():
+            for child2, grandparents2 in grandparent_map.items():
+                if child1 != child2 and grandparents1 == grandparents2:
+                    first_cousin_pairs.add((child1, child2))
+                    first_cousin_pairs.add((child2, child1))
+
+        # Check marriages against first cousin pairs
+        for family in families.values():
+            husband = family.get('husband')
+            wife = family.get('wife')
+            if (husband, wife) in first_cousin_pairs or (wife, husband) in first_cousin_pairs:
+                husband_name = individuals[husband]['name'] if husband in individuals else "Unknown"
+                wife_name = individuals[wife]['name'] if wife in individuals else "Unknown"
+                print(f"ERROR: Family: {family['id']}: First cousins {husband_name} ({husband}) and {wife_name} ({wife}) are married.")
+    def check_no_aunt_uncle_niece_nephew_marriages():
+        # Create a mapping of individuals to their parents
+        parent_map = {}
+        for family in families.values():
+            children = family.get('children', [])
+            for child in children:
+                if child in individuals:
+                    parent_map[child] = (family.get('husband'), family.get('wife'))
+
+        # Create a set of aunt/uncle to niece/nephew pairs
+        aunt_uncle_niece_nephew_pairs = set()
+        for family in families.values():
+            parents = (family.get('husband'), family.get('wife'))
+            children = family.get('children', [])
+            for child in children:
+                if child in parent_map:
+                    grandparents = parent_map[child]
+                    for sibling in children:
+                        if sibling != child and sibling in parent_map:
+                            uncle_aunt_family = parent_map[sibling]
+                            if grandparents == uncle_aunt_family:
+                                for uncle_aunt in uncle_aunt_family:
+                                    if uncle_aunt:
+                                        aunt_uncle_niece_nephew_pairs.add((uncle_aunt, child))
+                                        aunt_uncle_niece_nephew_pairs.add((child, uncle_aunt))
+
+        # Check marriages against aunt/uncle and niece/nephew pairs
+        for family in families.values():
+            husband = family.get('husband')
+            wife = family.get('wife')
+            if (husband, wife) in aunt_uncle_niece_nephew_pairs or (wife, husband) in aunt_uncle_niece_nephew_pairs:
+                husband_name = individuals[husband]['name'] if husband in individuals else "Unknown"
+                wife_name = individuals[wife]['name'] if wife in individuals else "Unknown"
+                print(f"ERROR: Family: {family['id']}: Aunt/Uncle {husband_name} ({husband}) and Niece/Nephew {wife_name} ({wife}) are married.")
+    def check_parents_gender():
+        for family in families.values():
+            husband_id = family.get('husband')
+            wife_id = family.get('wife')
+
+            # Check if the husband's gender is male
+            if husband_id in individuals:
+                husband_gender = individuals[husband_id].get('sex')
+                if husband_gender != 'M':
+                    husband_name = individuals[husband_id]['name'] if husband_id in individuals else "Unknown"
+                    print(f"ERROR: Family: {family['id']}: Husband {husband_name} ({husband_id}) is not male.")
+
+            # Check if the wife's gender is female
+            if wife_id in individuals:
+                wife_gender = individuals[wife_id].get('sex')
+                if wife_gender != 'F':
+                    wife_name = individuals[wife_id]['name'] if wife_id in individuals else "Unknown"
+                    print(f"ERROR: Family: {family['id']}: Wife {wife_name} ({wife_id}) is not female.")
+    def check_unique_individual_ids():
+        seen_ids = set()
+        for individual_id in individuals:
+            if individual_id in seen_ids:
+                print(f"ERROR: Individual {individual_id}: Duplicate individual ID found.")
+            else:
+                seen_ids.add(individual_id)
+    def check_unique_names_and_birthdays():
+        seen_names_birthdays = set()
+        for individual in individuals.values():
+            name = individual['name']
+            birthday = individual['birthday']
+            if (name, birthday) in seen_names_birthdays:
+                print(f"ERROR: Individual {individual['id']}: Duplicate name '{name}' and birthday '{birthday}' found.")
+            else:
+                seen_names_birthdays.add((name, birthday))
+    def check_unique_spouses():
+        seen_spouses = set()
+        for family in families.values():
+            husband_id = family.get('husband')
+            wife_id = family.get('wife')
+            if (husband_id, wife_id) in seen_spouses or (wife_id, husband_id) in seen_spouses:
+                print(f"ERROR: Family {family['id']}: Duplicate spouses found with husband {husband_id} and wife {wife_id}.")
+            else:
+                seen_spouses.add((husband_id, wife_id))
 
 
 
@@ -450,6 +554,18 @@ def check_anomalies():
     check_marriage_to_descendants()
     #US18
     check_siblings_marriage()
+    #US19
+    check_no_first_cousin_marriages()
+    #US20
+    check_no_aunt_uncle_niece_nephew_marriages()
+    #US21
+    check_parents_gender()
+    #US22
+    check_unique_individual_ids()
+    #US23
+    check_unique_names_and_birthdays()
+    #US24
+    check_unique_spouses()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
