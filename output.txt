@@ -3,7 +3,7 @@ Individuals:
 |  ID  |   Name  | Gender |   Birthday  | Child | Spouse |
 +------+---------+--------+-------------+-------+--------+
 | @I1@ |   John  |   M    | 17 APR 2001 |  @F1@ |  None  |
-| @I2@ | Timothy |   M    | 24 MAR 1991 |  None |  @F5@  |
+| @I2@ | Timothy |   M    | 24 MAR 1961 |  None |  @F5@  |
 | @I3@ | Barbara |   F    | 26 SEP 1961 |  @F2@ |  @F1@  |
 | @I4@ |  Laura  |   F    |  6 DEC 1988 |  @F5@ |  @F4@  |
 | @I5@ |  Andrea |   F    | 15 MAY 1960 |  None |  @F5@  |
