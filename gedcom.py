@@ -19,6 +19,13 @@ def parse_date(date_str):
             pass
     return None
 
+def calculate_age(birth_date):
+    if birth_date is None:
+        return None
+    today = datetime.now()
+    age = relativedelta(today, birth_date).years
+    return age
+
 def process_gedcom(file_path):
     current_individual = None
     current_family = None
@@ -531,7 +538,32 @@ def check_anomalies():
             if individual.get('spouse') is None and individual.get('children') == []:
                 print(f"ERROR: US26: Individual {individual['id']}: Must be a spouse or child.")
 
-
+    def list_single_over_30():
+        today = datetime.now()
+        for individual in individuals.values():
+            if individual.get('spouse') is None:  # Single person
+                birth_date = parse_date(individual.get('birthday'))
+                if birth_date:
+                    age = calculate_age(birth_date)
+                    if age and age > 30:
+                        print(f"Single person over 30: {individual['name']} ({individual['id']}), Age: {age}")
+    def list_mothers_with_multiple_births():
+        mother_to_children = {}
+        
+        # Collect children per mother
+        for family in families.values():
+            wife_id = family.get('wife')
+            if wife_id:
+                if wife_id not in mother_to_children:
+                    mother_to_children[wife_id] = set()
+                for child_id in family.get('children', []):
+                    mother_to_children[wife_id].add(child_id)
+        
+        # Print mothers with more than one child
+        for mother_id, children in mother_to_children.items():
+            if len(children) > 1:
+                mother_name = individuals[mother_id]['name'] if mother_id in individuals else "Unknown"
+                print(f"Mother with multiple births: {mother_name} ({mother_id}), Children: {', '.join(children)}")
 
 
 
@@ -587,6 +619,10 @@ def check_anomalies():
     check_unique_first_names()
     #US26
     check_membership()
+    #US31
+    list_single_over_30()
+    #US32
+    list_mothers_with_multiple_births()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
