@@ -199,7 +199,7 @@ def check_anomalies():
                 print(f"Error: Family: {family['id']}: has divorce date after wife's death date.")
 
      return None
-#errors
+
 
     #US08 Birth before marriage of parents
     def check_birth_before_parents_marriage():
@@ -226,7 +226,10 @@ def check_anomalies():
             if not birth_date:
                 continue
             birth_date = parse_date(birth_date)
-            marriage_date = individual.get('marriage_date')
+            individual_family = individual.get('spouse')
+            if individual_family is None:
+                continue
+            marriage_date = families[individual_family].get('marriage_date')
             if marriage_date:
                 marriage_date = parse_date(marriage_date)
                 if birth_date > marriage_date:
@@ -250,12 +253,12 @@ def check_anomalies():
                     if death_date_mother:
                         death_date_mother = parse_date(death_date_mother)
                         if birth_date > death_date_mother:
-                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before death date of mother.")
+                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date after death date of mother.")
                     if death_date_father:
                         death_date_father = parse_date(death_date_father)
-                        nine_months_after = death_date_father + datetime.timedelta(days=90)
+                        nine_months_after = death_date_father + timedelta(months=9)
                         if birth_date > nine_months_after:
-                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date before 9 months after death date of father.")
+                            print(f"ERROR: US09: Individual: {individuals[child_id]['name']} ({child_id}): has birth date after 9 months after death date of father.")
     # US10
     def check_marriage_after_14():
         # Marriage should be after 14 years of age
@@ -297,6 +300,7 @@ def check_anomalies():
                         if mother_birth_date:
                             mother_birth_date = parse_date(mother_birth_date)
                             age = relativedelta(mother_birth_date, birth_date).years
+                            age = age * -1
                             if age > 60:
                                 print(f"ERROR: US12: Family: {family['id']}: has mother too old.")
     #US13
@@ -316,9 +320,12 @@ def check_anomalies():
                             sibling_birth_date = sibling.get('birthday')
                             if sibling_birth_date:
                                 sibling_birth_date = parse_date(sibling_birth_date)
-                                age = relativedelta(sibling_birth_date, birth_date).months
-                                if age < 8:
-                                    print(f"ERROR: US13: Family: {family['id']}: has sibling too young.")
+                                delta = relativedelta(sibling_birth_date, birth_date)
+                                age_in_months = delta.years * 12 + delta.months
+                                if age_in_months < 0:
+                                    age_in_months = age_in_months * -1
+                                if age_in_months < 8:
+                                   return f"ERROR: US13: Family: {family['id']}: has sibling too young."
     #US14
     def multiple_births():
         # No more than 5 siblings should have the same birthday
@@ -337,7 +344,9 @@ def check_anomalies():
                             if sibling_birth_date:
                                 sibling_birth_date = parse_date(sibling_birth_date)
                                 if birth_date == sibling_birth_date:
-                                    print(f"ERROR: US14: Family: {family['id']}: has multiple births.")
+                                    count += 1
+                                    if count > 5:
+                                        return f"ERROR: US14: Family: {family['id']}: has multiple births."
     # US 16
     def check_wife_last_name():
         for family in families.values():
@@ -358,9 +367,6 @@ def check_anomalies():
                 print(f"ERROR: Family: US15 {family['id']} has more than 15 siblings.")
     #US17
     def check_marriage_to_descendants():
-
-        # children : parents
-        # children / husband or wife then I have to check if the other is a parents'
         map = {}
         for family in families.values():
             for child_id in family.get('children', []):
@@ -380,10 +386,6 @@ def check_anomalies():
             if wife_id in map:
                 if husband_id in map[wife_id]:
                     print(f"ERROR: US17: Family: {family['id']}: has marriage to descendants.")
-
-
-
-
     # US18
     def check_siblings_marriage():
         siblings = []
@@ -392,7 +394,6 @@ def check_anomalies():
         for family in families.values():
             newlist = []
             for child_id in family.get('children', []):
-
                 newlist.append(child_id)
             siblings.append(newlist)
             newlist = []
@@ -514,6 +515,22 @@ def check_anomalies():
                 print(f"ERROR: Family {family['id']}: Duplicate spouses found with husband {husband_id} and wife {wife_id}.")
             else:
                 seen_spouses.add((husband_id, wife_id))
+    #US 25
+    def check_unique_first_names():
+        seen_first_names = set()
+        for individual in individuals.values():
+            first_name = individual.get('name').split()[0]
+            if first_name in seen_first_names:
+                print(f"ERROR: US25: Individual {individual['id']}: Duplicate first name '{first_name}' found.")
+            else:
+                seen_first_names.add(first_name)
+    #US 26
+    def check_membership():
+        # indivudal must be a spouse or a child
+        for individual in individuals.values():
+            if individual.get('spouse') is None and individual.get('children') == []:
+                print(f"ERROR: US26: Individual {individual['id']}: Must be a spouse or child.")
+
 
 
 
@@ -566,6 +583,10 @@ def check_anomalies():
     check_unique_names_and_birthdays()
     #US24
     check_unique_spouses()
+    #US25
+    check_unique_first_names()
+    #US26
+    check_membership()
 # Prompt for the GEDCOM file path
 file_path = input("Please enter the path to the GEDCOM file: ")
 
